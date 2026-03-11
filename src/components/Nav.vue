@@ -9,7 +9,8 @@
           @click="changeMenu(index)"
         >
           <div class="block"></div>
-          <span class="iconfont" :class="item"></span>
+          <span v-if="item.type === 'iconfont'" class="iconfont" :class="item.class"></span>
+          <i v-else class="el-icon" :class="item.class"></i>
         </li>
       </ul>
     </div>
@@ -29,11 +30,11 @@ export default {
   data() {
     return {
       menuList: [
-        "icon-xinxi",
-        "icon-shipin",
-        "icon-shu",
-        "icon-shandian",
-        "icon-shezhi",
+        { type: 'iconfont', class: 'icon-xinxi' },
+        { type: 'el-icon', class: 'el-icon-chat-dot-round' },
+        { type: 'iconfont', class: 'icon-shu' },
+        { type: 'iconfont', class: 'icon-shandian' },
+        { type: 'iconfont', class: 'icon-shezhi' },
       ],
       current: 0,
       imgUrl: require('@/assets/img/head_portrait.jpg')
@@ -48,7 +49,9 @@ export default {
           }, () => {});
           break;
         case 1:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+          this.$router.push({
+            name: "GroupChat",
+          }, () => {});
           break;
         case 2:
           this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
@@ -101,7 +104,7 @@ export default {
           opacity: 0;
         }
         &:hover {
-          span {
+          span, i {
             color: rgb(29, 144, 245);
           }
           .block {
@@ -118,11 +121,16 @@ export default {
   }
 }
 .activeNav {
-  span {
+  span, i {
     color: rgb(29, 144, 245);
   }
   .block {
     opacity: 1 !important;
   }
+}
+
+.el-icon {
+  font-size: 20px;
+  color: #fff;
 }
 </style>
