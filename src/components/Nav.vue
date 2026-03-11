@@ -9,7 +9,8 @@
           @click="changeMenu(index)"
         >
           <div class="block"></div>
-          <span class="iconfont" :class="item"></span>
+          <i v-if="item.elIcon" :class="item.icon"></i>
+          <span v-else class="iconfont" :class="item.icon"></span>
         </li>
       </ul>
     </div>
@@ -29,11 +30,11 @@ export default {
   data() {
     return {
       menuList: [
-        "icon-xinxi",
-        "icon-shipin",
-        "icon-shu",
-        "icon-shandian",
-        "icon-shezhi",
+        { icon: "icon-xinxi", route: "ChatHome", elIcon: false },
+        { icon: "el-icon-s-custom", route: "GroupChat", elIcon: true },
+        { icon: "icon-shu", route: "", elIcon: false },
+        { icon: "icon-shandian", route: "", elIcon: false },
+        { icon: "icon-shezhi", route: "", elIcon: false },
       ],
       current: 0,
       imgUrl: require('@/assets/img/head_portrait.jpg')
@@ -41,30 +42,14 @@ export default {
   },
   methods: {
     changeMenu(index) {
-      switch (index) {
-        case 0:
-          this.$router.push({
-            name: "ChatHome",
-          }, () => {});
-          break;
-        case 1:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
-          break;
-        case 2:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
-          break;
-        case 3:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
-          break;
-        case 4:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
-          break;
-        default:
-          this.$router.push({
-            name: "ChatHome",
-          });
+      const menuItem = this.menuList[index];
+      if (menuItem.route) {
+        this.$router.push({
+          name: menuItem.route,
+        }, () => {});
+      } else {
+        this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
       }
-
       this.current = index;
     },
   },
@@ -100,8 +85,12 @@ export default {
           border-bottom-right-radius: 4px;
           opacity: 0;
         }
+        i {
+          font-size: 20px;
+          color: #fff;
+        }
         &:hover {
-          span {
+          span, i {
             color: rgb(29, 144, 245);
           }
           .block {
@@ -118,7 +107,7 @@ export default {
   }
 }
 .activeNav {
-  span {
+  span, i {
     color: rgb(29, 144, 245);
   }
   .block {
