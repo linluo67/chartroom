@@ -19,3 +19,21 @@ export const getChatMsg = params => {
     data: params
   }).then(res => res.data)
 }
+
+// 获取群组列表
+export const getGroupList = params => {
+  return axios({
+    method: 'post',
+    baseURL: `${baseUrl}/group/groupList`,
+    data: params
+  }).then(res => res.data)
+}
+
+// 创建群组
+export const createGroup = params => {
+  return axios({
+    method: 'post',
+    baseURL: `${baseUrl}/group/create`,
+    data: params
+  }).then(res => res.data)
+}

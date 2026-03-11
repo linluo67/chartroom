@@ -48,7 +48,9 @@ export default {
           }, () => {});
           break;
         case 1:
-          this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+          this.$router.push({
+            name: "GroupChat",
+          }, () => {});
           break;
         case 2:
           this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");

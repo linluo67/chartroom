@@ -5,6 +5,7 @@ import Video from '../view/pages/video.vue'
 import Lingting from '../view/pages/lingting.vue'
 import Setting from '../view/pages/setting.vue'
 import ChatWindow from '../view/pages/chatHome/chatwindow.vue'
+import GroupChat from '../view/pages/groupChat.vue'
  
 export default new VueRouter({
     routes: [
@@ -31,6 +32,11 @@ export default new VueRouter({
             path: "/Setting",
             name: "Setting",
             component: Setting
-        },    
+        },
+        {
+            path: "/GroupChat",
+            name: "GroupChat",
+            component: GroupChat
+        },
     ]
 })

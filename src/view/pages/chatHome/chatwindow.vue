@@ -45,7 +45,7 @@
               <img
                 :src="item.msg"
                 alt="表情"
-                v-if="item.extend.imgType == 1"
+                v-if="item.extend && item.extend.imgType == 1"
                 style="width: 100px; height: 100px"
               />
               <el-image :src="item.msg" :preview-src-list="srcImgList" v-else>
@@ -54,7 +54,7 @@
             <div class="chat-img" v-if="item.chatType == 2">
               <div class="word-file">
                 <FileCard
-                  :fileType="item.extend.fileType"
+                  :fileType="item.extend ? item.extend.fileType : 0"
                   :file="item.msg"
                 ></FileCard>
               </div>
@@ -73,7 +73,7 @@
               <img
                 :src="item.msg"
                 alt="表情"
-                v-if="item.extend.imgType == 1"
+                v-if="item.extend && item.extend.imgType == 1"
                 style="width: 100px; height: 100px"
               />
               <el-image
@@ -87,7 +87,7 @@
             <div class="chat-img" v-if="item.chatType == 2">
               <div class="word-file">
                 <FileCard
-                  :fileType="item.extend.fileType"
+                  :fileType="item.extend ? item.extend.fileType : 0"
                   :file="item.msg"
                 ></FileCard>
               </div>
@@ -163,9 +163,9 @@ export default {
         frinedId: this.frinedInfo.id,
       };
       getChatMsg(params).then((res) => {
-        this.chatList = res;
+        this.chatList = res || [];
         this.chatList.forEach((item) => {
-          if (item.chatType == 2 && item.extend.imgType == 2) {
+          if (item.chatType == 2 && item.extend && item.extend.imgType == 2) {
             this.srcImgList.push(item.msg);
           }
         });
