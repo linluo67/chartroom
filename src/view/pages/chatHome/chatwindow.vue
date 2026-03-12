@@ -8,6 +8,12 @@
         <div class="name">{{ frinedInfo.name }}</div>
         <div class="detail">{{ frinedInfo.detail }}</div>
       </div>
+      <div class="search-box">
+        <MessageSearch
+          :messageList="chatList"
+          @search="handleSearch"
+        ></MessageSearch>
+      </div>
       <div class="other-fun">
         <span class="iconfont icon-shipin" @click="video"> </span>
         <span class="iconfont icon-gf-telephone" @click="telephone"></span>
@@ -37,9 +43,8 @@
     <div class="botoom">
       <div class="chat-content" ref="chatContent">
         <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
-          <div class="chat-friend" v-if="item.uid !== '1001'">
-            <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+          <div class="chat-friend" v-if="item.uid !== '1001'" v-show="isMessageVisible(item)">
+            <div class="chat-text" v-if="item.chatType == 0" v-html="highlightText(item.msg)">
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -65,9 +70,8 @@
               <span>{{ item.time }}</span>
             </div>
           </div>
-          <div class="chat-me" v-else>
-            <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+          <div class="chat-me" v-else v-show="isMessageVisible(item)">
+            <div class="chat-text" v-if="item.chatType == 0" v-html="highlightText(item.msg)">
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -127,11 +131,13 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import MessageSearch from "@/components/MessageSearch.vue";
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    MessageSearch,
   },
   props: {
     frinedInfo: Object,
@@ -151,6 +157,7 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      searchKeyword: "",
     };
   },
   mounted() {
@@ -307,6 +314,30 @@ export default {
     video() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
     },
+        // 处理搜索
+    handleSearch(keyword) {
+      this.searchKeyword = keyword;
+    },
+    // 判断消息是否可见
+    isMessageVisible(item) {
+      if (!this.searchKeyword.trim()) return true;
+      if (item.chatType !== 0) return true;
+      return item.msg.toLowerCase().includes(this.searchKeyword.toLowerCase());
+    },
+    // 高亮文本
+    highlightText(text) {
+      if (!this.searchKeyword.trim()) return text;
+      const keyword = this.searchKeyword.trim();
+      const regex = new RegExp(`(${this.escapeRegExp(keyword)})`, "gi");
+      return text.replace(
+        regex,
+        '<span class="highlight">$1</span>'
+      );
+    },
+    // 转义正则特殊字符
+    escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    },
   },
 };
 </script>
@@ -320,17 +351,14 @@ export default {
 
   .top {
     margin-bottom: 50px;
-    &::after {
-      content: "";
-      display: block;
-      clear: both;
-    }
+    display: flex;
+    align-items: center;
     .head-pic {
-      float: left;
+      flex-shrink: 0;
     }
     .info-detail {
-      float: left;
       margin: 5px 20px 0;
+      flex-shrink: 0;
       .name {
         font-size: 20px;
         font-weight: 600;
@@ -342,9 +370,14 @@ export default {
         margin-top: 2px;
       }
     }
+    .search-box {
+      flex: 1;
+      max-width: 300px;
+      margin: 0 20px;
+    }
     .other-fun {
-      float: right;
-      margin-top: 20px;
+      margin-left: auto;
+      flex-shrink: 0;
       span {
         margin-left: 30px;
         cursor: pointer;
@@ -396,6 +429,12 @@ export default {
             &:hover {
               background-color: rgb(39, 42, 55);
             }
+            ::v-deep .highlight {
+              background-color: #ffeb3b;
+              color: #333;
+              padding: 2px 4px;
+              border-radius: 3px;
+            }
           }
           .chat-img {
             img {
@@ -439,6 +478,12 @@ export default {
             color: #fff;
             &:hover {
               background-color: rgb(26, 129, 219);
+            }
+            ::v-deep .highlight {
+              background-color: #ffeb3b;
+              color: #333;
+              padding: 2px 4px;
+              border-radius: 3px;
             }
           }
           .chat-img {
