@@ -35,11 +35,11 @@
       </div>
     </div>
     <div class="botoom">
+      <MessageSearch @search="handleSearch"></MessageSearch>
       <div class="chat-content" ref="chatContent">
-        <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
+        <div class="chat-wrapper" v-for="item in filteredChatList" :key="item.id">
           <div class="chat-friend" v-if="item.uid !== '1001'">
-            <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+            <div class="chat-text" v-if="item.chatType == 0" v-html="highlightKeyword(item.msg)">
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -66,8 +66,7 @@
             </div>
           </div>
           <div class="chat-me" v-else>
-            <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+            <div class="chat-text" v-if="item.chatType == 0" v-html="highlightKeyword(item.msg)">
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -127,11 +126,13 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import MessageSearch from "@/components/MessageSearch.vue";
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    MessageSearch,
   },
   props: {
     frinedInfo: Object,
@@ -151,7 +152,20 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      searchKeyword: "",
     };
+  },
+  computed: {
+    filteredChatList() {
+      if (!this.searchKeyword) {
+        return this.chatList;
+      }
+      const keyword = this.searchKeyword.toLowerCase();
+      return this.chatList.filter((item) => {
+        if (item.chatType !== 0) return false;
+        return item.msg.toLowerCase().includes(keyword);
+      });
+    },
   },
   mounted() {
     this.getFriendChatMsg();
@@ -306,6 +320,17 @@ export default {
     //发送视频
     video() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+    },
+    handleSearch(keyword) {
+      this.searchKeyword = keyword;
+    },
+    highlightKeyword(text) {
+      if (!this.searchKeyword || typeof text !== 'string') {
+        return text;
+      }
+      const keyword = this.searchKeyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const regex = new RegExp(`(${keyword})`, 'gi');
+      return text.replace(regex, '<span class="highlight-keyword">$1</span>');
     },
   },
 };
@@ -533,5 +558,11 @@ export default {
       }
     }
   }
+}
+::v-deep .highlight-keyword {
+  background-color: #ffeb3b;
+  color: #333;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 </style>
