@@ -19,7 +19,11 @@
   "devDependencies": {
     "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
+    "@vue/test-utils": "^2.4.6",
+    "babel-jest": "^30.3.0",
     "babel-plugin-component": "^1.1.1",
+    "jest": "^30.3.0",
+    "vue-jest": "^3.0.7",
     "vue-template-compiler": "^2.6.14"
   }
 }

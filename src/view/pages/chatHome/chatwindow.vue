@@ -8,6 +8,13 @@
         <div class="name">{{ frinedInfo.name }}</div>
         <div class="detail">{{ frinedInfo.detail }}</div>
       </div>
+      <div class="search-area">
+        <MessageSearch
+          :messageList="chatList"
+          @searchResult="handleSearchResult"
+          ref="messageSearch"
+        />
+      </div>
       <div class="other-fun">
         <span class="iconfont icon-shipin" @click="video"> </span>
         <span class="iconfont icon-gf-telephone" @click="telephone"></span>
@@ -36,10 +43,10 @@
     </div>
     <div class="botoom">
       <div class="chat-content" ref="chatContent">
-        <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
+        <div class="chat-wrapper" v-for="item in displayChatList" :key="item.id">
           <div class="chat-friend" v-if="item.uid !== '1001'">
             <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+              <span v-html="highlightText(item.msg)"></span>
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -67,7 +74,7 @@
           </div>
           <div class="chat-me" v-else>
             <div class="chat-text" v-if="item.chatType == 0">
-              {{ item.msg }}
+              <span v-html="highlightText(item.msg)"></span>
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
               <img
@@ -127,11 +134,13 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import MessageSearch from "@/components/MessageSearch.vue";
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    MessageSearch,
   },
   props: {
     frinedInfo: Object,
@@ -151,19 +160,38 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      searchKeyword: "",
+      displayChatList: [],
     };
   },
   mounted() {
     this.getFriendChatMsg();
   },
   methods: {
-    //获取聊天记录
+    handleSearchResult(result) {
+      this.searchKeyword = result.keyword;
+      if (result.keyword) {
+        this.displayChatList = result.messages;
+      } else {
+        this.displayChatList = this.chatList;
+      }
+    },
+    highlightText(text) {
+      if (!this.searchKeyword || !text) return text;
+      const keyword = this.searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${keyword})`, "gi");
+      return text.replace(
+        regex,
+        '<mark class="highlight" style="background-color: #ffeb3b; color: #333; padding: 0 2px; border-radius: 2px;">$1</mark>'
+      );
+    },
     getFriendChatMsg() {
       let params = {
         frinedId: this.frinedInfo.id,
       };
       getChatMsg(params).then((res) => {
         this.chatList = res;
+        this.displayChatList = res;
         this.chatList.forEach((item) => {
           if (item.chatType == 2 && item.extend.imgType == 2) {
             this.srcImgList.push(item.msg);
@@ -341,6 +369,12 @@ export default {
         font-size: 12px;
         margin-top: 2px;
       }
+    }
+    .search-area {
+      float: right;
+      width: 250px;
+      margin-top: 10px;
+      margin-right: 20px;
     }
     .other-fun {
       float: right;
