@@ -56,6 +56,7 @@ let chatMsg1002 = Mock.mock(
             msg: " 在吗？",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1001", //uid
+            id: Mock.mock("@id"),
         },
 
         {
@@ -65,6 +66,7 @@ let chatMsg1002 = Mock.mock(
             msg: " 怎么了？",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -73,6 +75,7 @@ let chatMsg1002 = Mock.mock(
             msg: "问你个问题",
             chatType: 0, //信息类型，0文字，1图片, 2文件
             uid: "1001",
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait1.jpg"),
@@ -104,6 +107,7 @@ let chatMsg1003 = Mock.mock(
             msg: "在干嘛呢",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1001", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -123,6 +127,7 @@ let chatMsg1003 = Mock.mock(
             msg: "吃饭",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -139,6 +144,7 @@ let chatMsg1003 = Mock.mock(
             msg: "蛋炒饭",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -147,6 +153,7 @@ let chatMsg1003 = Mock.mock(
             msg: "加蛋了吗？",
             chatType: 0, //信息类型，0文字，1图片, 2文件
             uid: "1001",
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait2.jpg"),
@@ -155,6 +162,7 @@ let chatMsg1003 = Mock.mock(
             msg: "你说呢",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait2.jpg"),
@@ -166,6 +174,7 @@ let chatMsg1003 = Mock.mock(
                 imgType: 1, //(1表情，2本地图片)
             },
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
     ]
 )
@@ -178,6 +187,7 @@ let chatMsg1004 = Mock.mock(
             msg: " sadasdawdas sadsad sad sad as despite ofhaving so much to do",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1001", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -197,6 +207,7 @@ let chatMsg1004 = Mock.mock(
             msg: " 21312大萨达萨达",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait.jpg"),
@@ -205,6 +216,7 @@ let chatMsg1004 = Mock.mock(
             msg: "111212",
             chatType: 0, //信息类型，0文字，1图片, 2文件
             uid: "1001",
+            id: Mock.mock("@id"),
         },
         {
             headImg: require("@/assets/img/head_portrait3.jpg"),
@@ -213,6 +225,7 @@ let chatMsg1004 = Mock.mock(
             msg: "大萨达萨达所大大萨达",
             chatType: 0, //信息类型，0文字，1图片
             uid: "1002", //uid
+            id: Mock.mock("@id"),
         },
     ]
 )

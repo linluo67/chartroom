@@ -36,8 +36,15 @@
     </div>
     <div class="botoom">
       <div class="chat-content" ref="chatContent">
-        <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
+        <div class="chat-wrapper" v-for="item in chatList" :key="item.id" @contextmenu.prevent="openContextMenu($event, item)">
           <div class="chat-friend" v-if="item.uid !== '1001'">
+            <QuoteMessage
+              v-if="item.quoteMessage"
+              :message="item.quoteMessage"
+              :show-close="false"
+              @jump="jumpToMessage"
+              class="quote-in-bubble"
+            ></QuoteMessage>
             <div class="chat-text" v-if="item.chatType == 0">
               {{ item.msg }}
             </div>
@@ -66,6 +73,13 @@
             </div>
           </div>
           <div class="chat-me" v-else>
+            <QuoteMessage
+              v-if="item.quoteMessage"
+              :message="item.quoteMessage"
+              :show-close="false"
+              @jump="jumpToMessage"
+              class="quote-in-bubble"
+            ></QuoteMessage>
             <div class="chat-text" v-if="item.chatType == 0">
               {{ item.msg }}
             </div>
@@ -100,22 +114,38 @@
           </div>
         </div>
       </div>
-      <div class="chatInputs">
-        <div class="emoji boxinput" @click="clickEmoji">
-          <img src="@/assets/img/emoji/smiling-face.png" alt="" />
-        </div>
-        <div class="emoji-content">
-          <Emoji
-            v-show="showEmoji"
-            @sendEmoji="sendEmoji"
-            @closeEmoji="clickEmoji"
-          ></Emoji>
-        </div>
-        <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
-        <div class="send boxinput" @click="sendText">
-          <img src="@/assets/img/emoji/rocket.png" alt="" />
+      <div class="input-wrapper">
+        <QuoteMessage
+          v-if="quotedMessage"
+          :message="quotedMessage"
+          @close="quotedMessage = null"
+          @jump="jumpToMessage"
+          class="quote-preview"
+        ></QuoteMessage>
+        <div class="chatInputs">
+          <div class="emoji boxinput" @click="clickEmoji">
+            <img src="@/assets/img/emoji/smiling-face.png" alt="" />
+          </div>
+          <div class="emoji-content">
+            <Emoji
+              v-show="showEmoji"
+              @sendEmoji="sendEmoji"
+              @closeEmoji="clickEmoji"
+            ></Emoji>
+          </div>
+          <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
+          <div class="send boxinput" @click="sendText">
+            <img src="@/assets/img/emoji/rocket.png" alt="" />
+          </div>
         </div>
       </div>
+    </div>
+    <div
+      v-if="showContextMenu"
+      class="context-menu"
+      :style="{ left: contextMenuPosition.x + 'px', top: contextMenuPosition.y + 'px' }"
+    >
+      <div class="context-menu-item" @click="quoteReply">引用回复</div>
     </div>
   </div>
 </template>
@@ -127,11 +157,13 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import QuoteMessage from "@/components/QuoteMessage.vue";
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    QuoteMessage,
   },
   props: {
     frinedInfo: Object,
@@ -151,6 +183,10 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      quotedMessage: null,
+      showContextMenu: false,
+      contextMenuPosition: { x: 0, y: 0 },
+      contextMessage: null,
     };
   },
   mounted() {
@@ -177,6 +213,7 @@ export default {
     sendMsg(msgList) {
       this.chatList.push(msgList);
       this.scrollBottom();
+      this.clearQuote();
     },
     //获取窗口高度并滚动至最底层
     scrollBottom() {
@@ -199,6 +236,7 @@ export default {
           msg: this.inputMsg,
           chatType: 0, //信息类型，0文字，1图片
           uid: "1001", //uid
+          quoteMessage: this.buildQuoteInfo(this.quotedMessage),
         };
         this.sendMsg(chatMsg);
         this.$emit('personCardSort', this.frinedInfo.id)
@@ -222,6 +260,7 @@ export default {
           imgType: 1, //(1表情，2本地图片)
         },
         uid: "1001",
+        quoteMessage: this.buildQuoteInfo(this.quotedMessage),
       };
       this.sendMsg(chatMsg);
       this.clickEmoji();
@@ -240,6 +279,7 @@ export default {
           imgType: 2, //(1表情，2本地图片)
         },
         uid: "1001",
+        quoteMessage: this.buildQuoteInfo(this.quotedMessage),
       };
       let files = e.target.files[0]; //图片文件名
       if (!e || !window.FileReader) return; // 看是否支持FileReader
@@ -264,6 +304,7 @@ export default {
           fileType: "", //(1word，2excel，3ppt，4pdf，5zpi, 6txt)
         },
         uid: "1001",
+        quoteMessage: this.buildQuoteInfo(this.quotedMessage),
       };
       let files = e.target.files[0]; //图片文件名
       chatMsg.msg = files;
@@ -306,6 +347,45 @@ export default {
     //发送视频
     video() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+    },
+    openContextMenu(e, message) {
+      this.showContextMenu = true;
+      this.contextMenuPosition = { x: e.clientX, y: e.clientY };
+      this.contextMessage = message;
+      document.addEventListener('click', this.closeContextMenu);
+    },
+    closeContextMenu() {
+      this.showContextMenu = false;
+      this.contextMessage = null;
+      document.removeEventListener('click', this.closeContextMenu);
+    },
+    quoteReply() {
+      this.quotedMessage = this.contextMessage;
+      this.closeContextMenu();
+      this.$nextTick(() => {
+        this.$refs.chatContent.querySelector('.inputs')?.focus();
+      });
+    },
+    jumpToMessage(message) {
+      const chatContent = this.$refs.chatContent;
+      const elements = chatContent.querySelectorAll('.chat-wrapper');
+      const index = this.chatList.findIndex(item => item.id === message.id);
+      if (index !== -1 && elements[index]) {
+        elements[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+    buildQuoteInfo(message) {
+      if (!message) return null;
+      return {
+        id: message.id,
+        name: message.name,
+        msg: message.msg,
+        chatType: message.chatType,
+        extend: message.extend || {}
+      };
+    },
+    clearQuote() {
+      this.quotedMessage = null;
     },
   },
 };
@@ -365,9 +445,11 @@ export default {
     padding: 20px;
     box-sizing: border-box;
     position: relative;
+    display: flex;
+    flex-direction: column;
     .chat-content {
       width: 100%;
-      height: 85%;
+      flex: 1;
       overflow-y: scroll;
       padding: 20px;
       box-sizing: border-box;
@@ -474,11 +556,14 @@ export default {
         }
       }
     }
+    .input-wrapper {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
     .chatInputs {
-      width: 90%;
-      position: absolute;
-      bottom: 0;
-      margin: 3%;
+      width: 94%;
+      margin: 0 3% 3% 3%;
       display: flex;
       .boxinput {
         width: 50px;
@@ -532,6 +617,43 @@ export default {
         }
       }
     }
+  }
+
+  .context-menu {
+    position: fixed;
+    background-color: rgb(56, 60, 75);
+    border: 1px solid rgb(80, 85, 103);
+    border-radius: 8px;
+    padding: 8px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    min-width: 120px;
+
+    .context-menu-item {
+      padding: 8px 16px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: rgb(29, 144, 245);
+      }
+    }
+  }
+
+  .quote-in-bubble {
+    margin-bottom: 8px;
+    max-width: 90%;
+    width: 100%;
+    border-radius: 8px 8px 8px 3px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .quote-preview {
+    margin: 0 3% 10px 3%;
+    width: 94%;
   }
 }
 </style>
