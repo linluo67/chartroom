@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-window">
+  <div class="chat-window" @contextmenu.prevent.stop>
     <div class="top">
       <div class="head-pic">
         <HeadPortrait :imgUrl="frinedInfo.headImg"></HeadPortrait>
@@ -31,27 +31,53 @@
           @change="sendFile"
           accept="application/*,text/*"
         />
-        <!-- accept="application/*" -->
       </div>
     </div>
     <div class="botoom">
       <div class="chat-content" ref="chatContent">
-        <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
+        <div 
+          class="chat-wrapper" 
+          v-for="item in chatList" 
+          :key="item.id"
+          :ref="'msg_' + item.id"
+          @contextmenu.prevent.stop="handleRightClick($event, item)"
+        >
           <div class="chat-friend" v-if="item.uid !== '1001'">
             <div class="chat-text" v-if="item.chatType == 0">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               {{ item.msg }}
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               <img
                 :src="item.msg"
                 alt="表情"
-                v-if="item.extend.imgType == 1"
+                v-if="item.extend && item.extend.imgType == 1"
                 style="width: 100px; height: 100px"
               />
               <el-image :src="item.msg" :preview-src-list="srcImgList" v-else>
               </el-image>
             </div>
             <div class="chat-img" v-if="item.chatType == 2">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               <div class="word-file">
                 <FileCard
                   :fileType="item.extend.fileType"
@@ -67,13 +93,27 @@
           </div>
           <div class="chat-me" v-else>
             <div class="chat-text" v-if="item.chatType == 0">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               {{ item.msg }}
             </div>
             <div class="chat-img" v-if="item.chatType == 1">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               <img
                 :src="item.msg"
                 alt="表情"
-                v-if="item.extend.imgType == 1"
+                v-if="item.extend && item.extend.imgType == 1"
                 style="width: 100px; height: 100px"
               />
               <el-image
@@ -85,6 +125,13 @@
               </el-image>
             </div>
             <div class="chat-img" v-if="item.chatType == 2">
+              <div class="quote-box" v-if="item.quoteMessage" @click.stop="jumpToMessage(item.quoteMessage.msgId)">
+                <div class="quote-indicator"></div>
+                <div class="quote-content-inner">
+                  <span class="quote-name">{{ item.quoteMessage.senderName }}</span>
+                  <span class="quote-preview">{{ item.quoteMessage.contentSummary }}</span>
+                </div>
+              </div>
               <div class="word-file">
                 <FileCard
                   :fileType="item.extend.fileType"
@@ -101,20 +148,40 @@
         </div>
       </div>
       <div class="chatInputs">
-        <div class="emoji boxinput" @click="clickEmoji">
-          <img src="@/assets/img/emoji/smiling-face.png" alt="" />
+        <QuoteMessage
+          v-if="currentQuote"
+          :quoteData="currentQuote"
+          @close="clearQuote"
+          @jump="jumpToMessage"
+        />
+        <div class="input-wrapper">
+          <div class="emoji boxinput" @click="clickEmoji">
+            <img src="@/assets/img/emoji/smiling-face.png" alt="" />
+          </div>
+          <div class="emoji-content">
+            <Emoji
+              v-show="showEmoji"
+              @sendEmoji="sendEmoji"
+              @closeEmoji="clickEmoji"
+            ></Emoji>
+          </div>
+          <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
+          <div class="send boxinput" @click="sendText">
+            <img src="@/assets/img/emoji/rocket.png" alt="" />
+          </div>
         </div>
-        <div class="emoji-content">
-          <Emoji
-            v-show="showEmoji"
-            @sendEmoji="sendEmoji"
-            @closeEmoji="clickEmoji"
-          ></Emoji>
-        </div>
-        <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
-        <div class="send boxinput" @click="sendText">
-          <img src="@/assets/img/emoji/rocket.png" alt="" />
-        </div>
+      </div>
+    </div>
+
+    <div 
+      class="context-menu" 
+      v-if="showContextMenu" 
+      :style="contextMenuStyle"
+      @click.stop
+    >
+      <div class="menu-item" @click="handleQuoteReply">
+        <span class="quote-icon">💬</span>
+        <span>引用回复</span>
       </div>
     </div>
   </div>
@@ -127,11 +194,14 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import QuoteMessage from "@/components/QuoteMessage.vue";
+
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    QuoteMessage,
   },
   props: {
     frinedInfo: Object,
@@ -151,13 +221,23 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      showContextMenu: false,
+      contextMenuStyle: {},
+      selectedMessage: null,
+      currentQuote: null,
+      messageIdCounter: 10000,
     };
   },
   mounted() {
     this.getFriendChatMsg();
+    document.addEventListener('click', this.handleDocumentClick);
+    document.addEventListener('contextmenu', this.handleDocumentContextMenu);
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleDocumentClick);
+    document.removeEventListener('contextmenu', this.handleDocumentContextMenu);
   },
   methods: {
-    //获取聊天记录
     getFriendChatMsg() {
       let params = {
         frinedId: this.frinedInfo.id,
@@ -165,44 +245,58 @@ export default {
       getChatMsg(params).then((res) => {
         this.chatList = res;
         this.chatList.forEach((item) => {
-          if (item.chatType == 2 && item.extend.imgType == 2) {
+          if (item.chatType == 2 && item.extend && item.extend.imgType == 2) {
             this.srcImgList.push(item.msg);
           }
         });
-    this.scrollBottom();
-
+        this.scrollBottom();
       });
     },
-    //发送信息
     sendMsg(msgList) {
       this.chatList.push(msgList);
       this.scrollBottom();
     },
-    //获取窗口高度并滚动至最底层
     scrollBottom() {
       this.$nextTick(() => {
         const scrollDom = this.$refs.chatContent;
         animation(scrollDom, scrollDom.scrollHeight - scrollDom.offsetHeight);
       });
     },
-    //关闭标签框
     clickEmoji() {
       this.showEmoji = !this.showEmoji;
     },
-    //发送文字信息
+    generateMessageId() {
+      this.messageIdCounter++;
+      return 'msg_' + Date.now() + '_' + this.messageIdCounter;
+    },
+    getContentSummary(message) {
+      if (message.chatType === 0) {
+        return message.msg;
+      } else if (message.chatType === 1) {
+        return '[图片]';
+      } else if (message.chatType === 2) {
+        return message.msg ? message.msg.name || '[文件]' : '[文件]';
+      }
+      return '[消息]';
+    },
     sendText() {
       if (this.inputMsg) {
         let chatMsg = {
+          id: this.generateMessageId(),
           headImg: require("@/assets/img/head_portrait.jpg"),
           name: "大毛是小白",
           time: "09：12 AM",
           msg: this.inputMsg,
-          chatType: 0, //信息类型，0文字，1图片
-          uid: "1001", //uid
+          chatType: 0,
+          uid: "1001",
         };
+        if (this.currentQuote) {
+          chatMsg.quoteMessage = { ...this.currentQuote };
+        }
         this.sendMsg(chatMsg);
-        this.$emit('personCardSort', this.frinedInfo.id)
+        this.$emit('personCardSort', this.frinedInfo.id);
         this.inputMsg = "";
+        this.clearQuote();
       } else {
         this.$message({
           message: "消息不能为空哦~",
@@ -210,64 +304,73 @@ export default {
         });
       }
     },
-    //发送表情
     sendEmoji(msg) {
       let chatMsg = {
+        id: this.generateMessageId(),
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
         msg: msg,
-        chatType: 1, //信息类型，0文字，1图片
+        chatType: 1,
         extend: {
-          imgType: 1, //(1表情，2本地图片)
+          imgType: 1,
         },
         uid: "1001",
       };
+      if (this.currentQuote) {
+        chatMsg.quoteMessage = { ...this.currentQuote };
+      }
       this.sendMsg(chatMsg);
       this.clickEmoji();
+      this.clearQuote();
     },
-    //发送本地图片
     sendImg(e) {
       let _this = this;
-      console.log(e.target.files);
       let chatMsg = {
+        id: this.generateMessageId(),
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
         msg: "",
-        chatType: 1, //信息类型，0文字，1图片, 2文件
+        chatType: 1,
         extend: {
-          imgType: 2, //(1表情，2本地图片)
+          imgType: 2,
         },
         uid: "1001",
       };
-      let files = e.target.files[0]; //图片文件名
-      if (!e || !window.FileReader) return; // 看是否支持FileReader
+      if (this.currentQuote) {
+        chatMsg.quoteMessage = { ...this.currentQuote };
+      }
+      let files = e.target.files[0];
+      if (!e || !window.FileReader) return;
       let reader = new FileReader();
-      reader.readAsDataURL(files); // 关键一步，在这里转换的
+      reader.readAsDataURL(files);
       reader.onloadend = function() {
-        chatMsg.msg = this.result; //赋值
+        chatMsg.msg = this.result;
         _this.srcImgList.push(chatMsg.msg);
       };
       this.sendMsg(chatMsg);
       e.target.files = null;
+      this.clearQuote();
     },
-    //发送文件
     sendFile(e) {
       let chatMsg = {
+        id: this.generateMessageId(),
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
         msg: "",
-        chatType: 2, //信息类型，0文字，1图片, 2文件
+        chatType: 2,
         extend: {
-          fileType: "", //(1word，2excel，3ppt，4pdf，5zpi, 6txt)
+          fileType: "",
         },
         uid: "1001",
       };
-      let files = e.target.files[0]; //图片文件名
+      if (this.currentQuote) {
+        chatMsg.quoteMessage = { ...this.currentQuote };
+      }
+      let files = e.target.files[0];
       chatMsg.msg = files;
-      console.log(files);
       if (files) {
         switch (files.type) {
           case "application/msword":
@@ -297,15 +400,78 @@ export default {
         }
         this.sendMsg(chatMsg);
         e.target.files = null;
+        this.clearQuote();
       }
     },
-    // 发送语音
     telephone() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
     },
-    //发送视频
     video() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+    },
+    handleRightClick(event, message) {
+      this.selectedMessage = message;
+      this.showContextMenu = true;
+      const menuWidth = 140;
+      const menuHeight = 50;
+      let left = event.clientX;
+      let top = event.clientY;
+      if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 10;
+      }
+      if (top + menuHeight > window.innerHeight) {
+        top = window.innerHeight - menuHeight - 10;
+      }
+      this.contextMenuStyle = {
+        left: left + 'px',
+        top: top + 'px',
+      };
+    },
+    handleDocumentClick(event) {
+      if (this.showContextMenu) {
+        this.showContextMenu = false;
+      }
+    },
+    handleDocumentContextMenu(event) {
+      if (this.showContextMenu) {
+        this.showContextMenu = false;
+      }
+    },
+    handleQuoteReply() {
+      if (!this.selectedMessage) return;
+      this.currentQuote = {
+        msgId: this.selectedMessage.id,
+        senderName: this.selectedMessage.name,
+        contentSummary: this.getContentSummary(this.selectedMessage),
+        msgType: this.selectedMessage.chatType,
+      };
+      this.showContextMenu = false;
+      this.$message({
+        message: "已引用消息，请输入回复内容",
+        type: "success",
+      });
+    },
+    clearQuote() {
+      this.currentQuote = null;
+    },
+    jumpToMessage(msgId) {
+      if (!msgId) return;
+      const messageElements = this.$refs['msg_' + msgId];
+      if (messageElements && messageElements.length > 0) {
+        const targetElement = messageElements[0];
+        const chatContent = this.$refs.chatContent;
+        const targetOffset = targetElement.offsetTop - chatContent.offsetTop;
+        animation(chatContent, targetOffset - 20);
+        targetElement.classList.add('highlight-message');
+        setTimeout(() => {
+          targetElement.classList.remove('highlight-message');
+        }, 2000);
+      } else {
+        this.$message({
+          message: "原消息不在当前聊天记录中",
+          type: "warning",
+        });
+      }
     },
   },
 };
@@ -349,9 +515,6 @@ export default {
         margin-left: 30px;
         cursor: pointer;
       }
-      // .icon-tupian {
-
-      // }
       input {
         display: none;
       }
@@ -372,13 +535,31 @@ export default {
       padding: 20px;
       box-sizing: border-box;
       &::-webkit-scrollbar {
-        width: 0; /* Safari,Chrome 隐藏滚动条 */
-        height: 0; /* Safari,Chrome 隐藏滚动条 */
-        display: none; /* 移动端、pad 上Safari，Chrome，隐藏滚动条 */
+        width: 0;
+        height: 0;
+        display: none;
       }
       .chat-wrapper {
         position: relative;
         word-break: break-all;
+        transition: background-color 0.3s;
+        border-radius: 10px;
+        padding: 5px;
+        margin: -5px;
+        margin-bottom: 15px;
+        cursor: default;
+        &.highlight-message {
+          background-color: rgba(29, 144, 245, 0.2);
+          animation: highlight-fade 2s ease-out;
+        }
+        @keyframes highlight-fade {
+          0% {
+            background-color: rgba(29, 144, 245, 0.4);
+          }
+          100% {
+            background-color: rgba(29, 144, 245, 0.1);
+          }
+        }
         .chat-friend {
           width: 100%;
           float: left;
@@ -396,11 +577,94 @@ export default {
             &:hover {
               background-color: rgb(39, 42, 55);
             }
+            .quote-box {
+              background-color: rgba(0, 0, 0, 0.2);
+              border-radius: 8px;
+              padding: 8px 12px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: flex-start;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.3);
+              }
+              .quote-indicator {
+                width: 3px;
+                background-color: rgb(29, 144, 245);
+                border-radius: 2px;
+                margin-right: 10px;
+                align-self: stretch;
+                min-height: 30px;
+              }
+              .quote-content-inner {
+                flex: 1;
+                overflow: hidden;
+                .quote-name {
+                  display: block;
+                  color: rgb(29, 144, 245);
+                  font-size: 12px;
+                  font-weight: 500;
+                  margin-bottom: 4px;
+                }
+                .quote-preview {
+                  display: block;
+                  color: rgb(180, 180, 180);
+                  font-size: 12px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  max-width: 250px;
+                }
+              }
+            }
           }
           .chat-img {
             img {
               width: 100px;
               height: 100px;
+            }
+            .quote-box {
+              background-color: rgba(0, 0, 0, 0.2);
+              border-radius: 8px;
+              padding: 8px 12px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: flex-start;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              max-width: 300px;
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.3);
+              }
+              .quote-indicator {
+                width: 3px;
+                background-color: rgb(29, 144, 245);
+                border-radius: 2px;
+                margin-right: 10px;
+                align-self: stretch;
+                min-height: 30px;
+              }
+              .quote-content-inner {
+                flex: 1;
+                overflow: hidden;
+                .quote-name {
+                  display: block;
+                  color: rgb(29, 144, 245);
+                  font-size: 12px;
+                  font-weight: 500;
+                  margin-bottom: 4px;
+                }
+                .quote-preview {
+                  display: block;
+                  color: rgb(180, 180, 180);
+                  font-size: 12px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  max-width: 250px;
+                }
+              }
             }
           }
           .info-time {
@@ -440,12 +704,95 @@ export default {
             &:hover {
               background-color: rgb(26, 129, 219);
             }
+            .quote-box {
+              background-color: rgba(0, 0, 0, 0.15);
+              border-radius: 8px;
+              padding: 8px 12px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: flex-start;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.25);
+              }
+              .quote-indicator {
+                width: 3px;
+                background-color: #fff;
+                border-radius: 2px;
+                margin-right: 10px;
+                align-self: stretch;
+                min-height: 30px;
+              }
+              .quote-content-inner {
+                flex: 1;
+                overflow: hidden;
+                .quote-name {
+                  display: block;
+                  color: rgba(255, 255, 255, 0.9);
+                  font-size: 12px;
+                  font-weight: 500;
+                  margin-bottom: 4px;
+                }
+                .quote-preview {
+                  display: block;
+                  color: rgba(255, 255, 255, 0.7);
+                  font-size: 12px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  max-width: 250px;
+                }
+              }
+            }
           }
           .chat-img {
             img {
               max-width: 300px;
               max-height: 200px;
               border-radius: 10px;
+            }
+            .quote-box {
+              background-color: rgba(0, 0, 0, 0.15);
+              border-radius: 8px;
+              padding: 8px 12px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: flex-start;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              max-width: 300px;
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.25);
+              }
+              .quote-indicator {
+                width: 3px;
+                background-color: #fff;
+                border-radius: 2px;
+                margin-right: 10px;
+                align-self: stretch;
+                min-height: 30px;
+              }
+              .quote-content-inner {
+                flex: 1;
+                overflow: hidden;
+                .quote-name {
+                  display: block;
+                  color: rgba(255, 255, 255, 0.9);
+                  font-size: 12px;
+                  font-weight: 500;
+                  margin-bottom: 4px;
+                }
+                .quote-preview {
+                  display: block;
+                  color: rgba(255, 255, 255, 0.7);
+                  font-size: 12px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  max-width: 250px;
+                }
+              }
             }
           }
           .info-time {
@@ -480,6 +827,13 @@ export default {
       bottom: 0;
       margin: 3%;
       display: flex;
+      flex-direction: column;
+      
+      .input-wrapper {
+        display: flex;
+        width: 100%;
+      }
+      
       .boxinput {
         width: 50px;
         height: 50px;
@@ -530,6 +884,36 @@ export default {
         &:hover {
           box-shadow: 0px 0px 10px 0px rgba(0, 136, 255);
         }
+      }
+    }
+  }
+  
+  .context-menu {
+    position: fixed;
+    background-color: rgb(45, 48, 63);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 8px 0;
+    z-index: 9999;
+    min-width: 140px;
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      color: #fff;
+      font-size: 14px;
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: rgb(29, 144, 245);
+        border-radius: 4px;
+      }
+      
+      .quote-icon {
+        margin-right: 10px;
+        font-size: 18px;
       }
     }
   }
