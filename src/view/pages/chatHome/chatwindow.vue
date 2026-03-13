@@ -36,8 +36,18 @@
     </div>
     <div class="botoom">
       <div class="chat-content" ref="chatContent">
-        <div class="chat-wrapper" v-for="item in chatList" :key="item.id">
-          <div class="chat-friend" v-if="item.uid !== '1001'">
+        <div class="chat-wrapper" v-for="item in chatList" :key="item.id" :data-id="item.id">
+          <div class="chat-friend" v-if="item.uid !== '1001'" @contextmenu.prevent="showContextMenu($event, item)">
+            <!-- 引用消息显示 -->
+            <div class="chat-quote" v-if="item.quoteMessage" @click="jumpToMessage(item.quoteMessage.id)">
+              <div class="quote-line"></div>
+              <div class="quote-info">
+                <span class="quote-name">{{ item.quoteMessage.name }}</span>
+                <span class="quote-content" v-if="item.quoteMessage.chatType === 0">{{ item.quoteMessage.msg }}</span>
+                <span class="quote-content" v-else-if="item.quoteMessage.chatType === 1">[图片]</span>
+                <span class="quote-content" v-else-if="item.quoteMessage.chatType === 2">[文件]</span>
+              </div>
+            </div>
             <div class="chat-text" v-if="item.chatType == 0">
               {{ item.msg }}
             </div>
@@ -65,7 +75,17 @@
               <span>{{ item.time }}</span>
             </div>
           </div>
-          <div class="chat-me" v-else>
+          <div class="chat-me" v-else @contextmenu.prevent="showContextMenu($event, item)">
+            <!-- 引用消息显示 -->
+            <div class="chat-quote" v-if="item.quoteMessage" @click="jumpToMessage(item.quoteMessage.id)">
+              <div class="quote-line"></div>
+              <div class="quote-info">
+                <span class="quote-name">{{ item.quoteMessage.name }}</span>
+                <span class="quote-content" v-if="item.quoteMessage.chatType === 0">{{ item.quoteMessage.msg }}</span>
+                <span class="quote-content" v-else-if="item.quoteMessage.chatType === 1">[图片]</span>
+                <span class="quote-content" v-else-if="item.quoteMessage.chatType === 2">[文件]</span>
+              </div>
+            </div>
             <div class="chat-text" v-if="item.chatType == 0">
               {{ item.msg }}
             </div>
@@ -100,22 +120,36 @@
           </div>
         </div>
       </div>
-      <div class="chatInputs">
-        <div class="emoji boxinput" @click="clickEmoji">
-          <img src="@/assets/img/emoji/smiling-face.png" alt="" />
-        </div>
-        <div class="emoji-content">
-          <Emoji
-            v-show="showEmoji"
-            @sendEmoji="sendEmoji"
-            @closeEmoji="clickEmoji"
-          ></Emoji>
-        </div>
-        <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
-        <div class="send boxinput" @click="sendText">
-          <img src="@/assets/img/emoji/rocket.png" alt="" />
+      <!-- 引用预览和输入区域 -->
+      <div class="chat-input-area">
+        <!-- 引用预览卡片 -->
+        <QuoteMessage
+          v-if="quotingMessage"
+          :quoteData="quotingMessage"
+          @close="cancelQuote"
+          @jump="jumpToMessage"
+        />
+        <div class="chatInputs">
+          <div class="emoji boxinput" @click="clickEmoji">
+            <img src="@/assets/img/emoji/smiling-face.png" alt="" />
+          </div>
+          <div class="emoji-content">
+            <Emoji
+              v-show="showEmoji"
+              @sendEmoji="sendEmoji"
+              @closeEmoji="clickEmoji"
+            ></Emoji>
+          </div>
+          <input class="inputs" v-model="inputMsg" @keyup.enter="sendText" />
+          <div class="send boxinput" @click="sendText">
+            <img src="@/assets/img/emoji/rocket.png" alt="" />
+          </div>
         </div>
       </div>
+    </div>
+    <!-- 右键菜单 -->
+    <div class="context-menu" v-show="showMenu" :style="{ left: menuX + 'px', top: menuY + 'px' }">
+      <div class="menu-item" @click="handleQuote">引用回复</div>
     </div>
   </div>
 </template>
@@ -127,11 +161,14 @@ import { getChatMsg } from "@/api/getData";
 import HeadPortrait from "@/components/HeadPortrait";
 import Emoji from "@/components/Emoji";
 import FileCard from "@/components/FileCard.vue";
+import QuoteMessage from "@/components/QuoteMessage.vue";
+
 export default {
   components: {
     HeadPortrait,
     Emoji,
     FileCard,
+    QuoteMessage,
   },
   props: {
     frinedInfo: Object,
@@ -151,10 +188,22 @@ export default {
       showEmoji: false,
       friendInfo: {},
       srcImgList: [],
+      // 右键菜单相关
+      showMenu: false,
+      menuX: 0,
+      menuY: 0,
+      selectedMessage: null,
+      // 引用消息相关
+      quotingMessage: null,
     };
   },
   mounted() {
     this.getFriendChatMsg();
+    // 点击其他地方关闭右键菜单
+    document.addEventListener('click', this.hideContextMenu);
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.hideContextMenu);
   },
   methods: {
     //获取聊天记录
@@ -163,14 +212,16 @@ export default {
         frinedId: this.frinedInfo.id,
       };
       getChatMsg(params).then((res) => {
-        this.chatList = res;
+        this.chatList = res.map((item, index) => ({
+          ...item,
+          id: item.id || `msg_${Date.now()}_${index}`,
+        }));
         this.chatList.forEach((item) => {
           if (item.chatType == 2 && item.extend.imgType == 2) {
             this.srcImgList.push(item.msg);
           }
         });
-    this.scrollBottom();
-
+        this.scrollBottom();
       });
     },
     //发送信息
@@ -193,6 +244,7 @@ export default {
     sendText() {
       if (this.inputMsg) {
         let chatMsg = {
+          id: `msg_${Date.now()}`,
           headImg: require("@/assets/img/head_portrait.jpg"),
           name: "大毛是小白",
           time: "09：12 AM",
@@ -200,9 +252,22 @@ export default {
           chatType: 0, //信息类型，0文字，1图片
           uid: "1001", //uid
         };
+        
+        // 如果有引用消息，添加到消息中
+        if (this.quotingMessage) {
+          chatMsg.quoteMessage = {
+            id: this.quotingMessage.id,
+            name: this.quotingMessage.name,
+            msg: this.quotingMessage.msg,
+            chatType: this.quotingMessage.chatType,
+            uid: this.quotingMessage.uid,
+          };
+        }
+        
         this.sendMsg(chatMsg);
-        this.$emit('personCardSort', this.frinedInfo.id)
+        this.$emit('personCardSort', this.frinedInfo.id);
         this.inputMsg = "";
+        this.quotingMessage = null; // 发送后清除引用
       } else {
         this.$message({
           message: "消息不能为空哦~",
@@ -213,6 +278,7 @@ export default {
     //发送表情
     sendEmoji(msg) {
       let chatMsg = {
+        id: `msg_${Date.now()}`,
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
@@ -223,14 +289,27 @@ export default {
         },
         uid: "1001",
       };
+      
+      // 如果有引用消息，添加到消息中
+      if (this.quotingMessage) {
+        chatMsg.quoteMessage = {
+          id: this.quotingMessage.id,
+          name: this.quotingMessage.name,
+          msg: this.quotingMessage.msg,
+          chatType: this.quotingMessage.chatType,
+          uid: this.quotingMessage.uid,
+        };
+      }
+      
       this.sendMsg(chatMsg);
       this.clickEmoji();
+      this.quotingMessage = null; // 发送后清除引用
     },
     //发送本地图片
     sendImg(e) {
       let _this = this;
-      console.log(e.target.files);
       let chatMsg = {
+        id: `msg_${Date.now()}`,
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
@@ -241,6 +320,18 @@ export default {
         },
         uid: "1001",
       };
+      
+      // 如果有引用消息，添加到消息中
+      if (this.quotingMessage) {
+        chatMsg.quoteMessage = {
+          id: this.quotingMessage.id,
+          name: this.quotingMessage.name,
+          msg: this.quotingMessage.msg,
+          chatType: this.quotingMessage.chatType,
+          uid: this.quotingMessage.uid,
+        };
+      }
+      
       let files = e.target.files[0]; //图片文件名
       if (!e || !window.FileReader) return; // 看是否支持FileReader
       let reader = new FileReader();
@@ -248,13 +339,15 @@ export default {
       reader.onloadend = function() {
         chatMsg.msg = this.result; //赋值
         _this.srcImgList.push(chatMsg.msg);
+        _this.sendMsg(chatMsg);
       };
-      this.sendMsg(chatMsg);
       e.target.files = null;
+      this.quotingMessage = null; // 发送后清除引用
     },
     //发送文件
     sendFile(e) {
       let chatMsg = {
+        id: `msg_${Date.now()}`,
         headImg: require("@/assets/img/head_portrait.jpg"),
         name: "大毛是小白",
         time: "09：12 AM",
@@ -265,9 +358,20 @@ export default {
         },
         uid: "1001",
       };
+      
+      // 如果有引用消息，添加到消息中
+      if (this.quotingMessage) {
+        chatMsg.quoteMessage = {
+          id: this.quotingMessage.id,
+          name: this.quotingMessage.name,
+          msg: this.quotingMessage.msg,
+          chatType: this.quotingMessage.chatType,
+          uid: this.quotingMessage.uid,
+        };
+      }
+      
       let files = e.target.files[0]; //图片文件名
       chatMsg.msg = files;
-      console.log(files);
       if (files) {
         switch (files.type) {
           case "application/msword":
@@ -297,6 +401,7 @@ export default {
         }
         this.sendMsg(chatMsg);
         e.target.files = null;
+        this.quotingMessage = null; // 发送后清除引用
       }
     },
     // 发送语音
@@ -306,6 +411,41 @@ export default {
     //发送视频
     video() {
       this.$message("该功能还没有开发哦，敬请期待一下吧~🥳");
+    },
+    // 显示右键菜单
+    showContextMenu(event, message) {
+      this.showMenu = true;
+      this.menuX = event.clientX;
+      this.menuY = event.clientY;
+      this.selectedMessage = message;
+    },
+    // 隐藏右键菜单
+    hideContextMenu() {
+      this.showMenu = false;
+      this.selectedMessage = null;
+    },
+    // 处理引用
+    handleQuote() {
+      if (this.selectedMessage) {
+        this.quotingMessage = { ...this.selectedMessage };
+        this.hideContextMenu();
+      }
+    },
+    // 取消引用
+    cancelQuote() {
+      this.quotingMessage = null;
+    },
+    // 跳转到原消息
+    jumpToMessage(messageId) {
+      const messageElement = document.querySelector(`[data-id="${messageId}"]`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 添加高亮效果
+        messageElement.classList.add('highlight-message');
+        setTimeout(() => {
+          messageElement.classList.remove('highlight-message');
+        }, 2000);
+      }
     },
   },
 };
@@ -367,7 +507,7 @@ export default {
     position: relative;
     .chat-content {
       width: 100%;
-      height: 85%;
+      height: calc(100% - 80px);
       overflow-y: scroll;
       padding: 20px;
       box-sizing: border-box;
@@ -387,6 +527,52 @@ export default {
           flex-direction: column;
           justify-content: flex-start;
           align-items: flex-start;
+          
+          .chat-quote {
+            display: flex;
+            align-items: flex-start;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            max-width: 90%;
+            transition: background-color 0.2s;
+            
+            &:hover {
+              background-color: rgba(255, 255, 255, 0.15);
+            }
+            
+            .quote-line {
+              width: 3px;
+              min-width: 3px;
+              background-color: rgb(29, 144, 245);
+              border-radius: 2px;
+              margin-right: 8px;
+              align-self: stretch;
+            }
+            
+            .quote-info {
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+              
+              .quote-name {
+                font-size: 13px;
+                color: rgb(29, 144, 245);
+                margin-bottom: 2px;
+              }
+              
+              .quote-content {
+                font-size: 12px;
+                color: rgb(176, 178, 189);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            }
+          }
+          
           .chat-text {
             max-width: 90%;
             padding: 20px;
@@ -430,6 +616,52 @@ export default {
           flex-direction: column;
           justify-content: flex-end;
           align-items: flex-end;
+          
+          .chat-quote {
+            display: flex;
+            align-items: flex-start;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            max-width: 90%;
+            transition: background-color 0.2s;
+            
+            &:hover {
+              background-color: rgba(255, 255, 255, 0.15);
+            }
+            
+            .quote-line {
+              width: 3px;
+              min-width: 3px;
+              background-color: rgb(255, 255, 255);
+              border-radius: 2px;
+              margin-right: 8px;
+              align-self: stretch;
+            }
+            
+            .quote-info {
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+              
+              .quote-name {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.8);
+                margin-bottom: 2px;
+              }
+              
+              .quote-content {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.6);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            }
+          }
+          
           .chat-text {
             float: right;
             max-width: 90%;
@@ -473,63 +705,111 @@ export default {
           }
         }
       }
+      
+      .highlight-message {
+        animation: highlight 2s ease;
+      }
+      
+      @keyframes highlight {
+        0% {
+          background-color: rgba(29, 144, 245, 0.3);
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
     }
-    .chatInputs {
-      width: 90%;
+    .chat-input-area {
       position: absolute;
       bottom: 0;
-      margin: 3%;
-      display: flex;
-      .boxinput {
-        width: 50px;
-        height: 50px;
-        background-color: rgb(66, 70, 86);
-        border-radius: 15px;
-        border: 1px solid rgb(80, 85, 103);
-        position: relative;
-        cursor: pointer;
-        img {
-          width: 30px;
-          height: 30px;
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      background-color: rgb(50, 54, 68);
+      border-radius: 0 0 20px 20px;
+      
+      .chatInputs {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        
+        .boxinput {
+          width: 50px;
+          height: 50px;
+          background-color: rgb(66, 70, 86);
+          border-radius: 15px;
+          border: 1px solid rgb(80, 85, 103);
+          position: relative;
+          cursor: pointer;
+          flex-shrink: 0;
+          img {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+          }
         }
-      }
-      .emoji {
-        transition: 0.3s;
-        &:hover {
-          background-color: rgb(46, 49, 61);
-          border: 1px solid rgb(71, 73, 82);
+        .emoji {
+          transition: 0.3s;
+          &:hover {
+            background-color: rgb(46, 49, 61);
+            border: 1px solid rgb(71, 73, 82);
+          }
         }
-      }
 
-      .inputs {
-        width: 90%;
-        height: 50px;
-        background-color: rgb(66, 70, 86);
-        border-radius: 15px;
-        border: 2px solid rgb(34, 135, 225);
-        padding: 10px;
-        box-sizing: border-box;
-        transition: 0.2s;
-        font-size: 20px;
-        color: #fff;
-        font-weight: 100;
-        margin: 0 20px;
-        &:focus {
-          outline: none;
+        .inputs {
+          flex: 1;
+          height: 50px;
+          background-color: rgb(66, 70, 86);
+          border-radius: 15px;
+          border: 2px solid rgb(34, 135, 225);
+          padding: 10px;
+          box-sizing: border-box;
+          transition: 0.2s;
+          font-size: 20px;
+          color: #fff;
+          font-weight: 100;
+          margin: 0 15px;
+          min-width: 0;
+          &:focus {
+            outline: none;
+          }
+        }
+        .send {
+          background-color: rgb(29, 144, 245);
+          border: 0;
+          transition: 0.3s;
+          box-shadow: 0px 0px 5px 0px rgba(0, 136, 255);
+          flex-shrink: 0;
+          &:hover {
+            box-shadow: 0px 0px 10px 0px rgba(0, 136, 255);
+          }
         }
       }
-      .send {
+    }
+  }
+  
+  // 右键菜单样式
+  .context-menu {
+    position: fixed;
+    background-color: rgb(66, 70, 86);
+    border-radius: 8px;
+    padding: 5px 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    min-width: 120px;
+    
+    .menu-item {
+      padding: 10px 20px;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      
+      &:hover {
         background-color: rgb(29, 144, 245);
-        border: 0;
-        transition: 0.3s;
-        box-shadow: 0px 0px 5px 0px rgba(0, 136, 255);
-        &:hover {
-          box-shadow: 0px 0px 10px 0px rgba(0, 136, 255);
-        }
       }
     }
   }
